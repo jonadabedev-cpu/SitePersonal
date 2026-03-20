@@ -83,8 +83,9 @@ section {
 }
 
 .home-container {
-   background: url("./img/academia.jpg");
+   background: url("./img/academiaofc.jpg");
    background-position: center;
+   height: 100vh;
    background-size: cover;
 }
 
