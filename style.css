@@ -45,27 +45,38 @@ section {
    padding-bottom: 1.5rem;
 }
 
-.navbar a {
-   margin: 0 1rem;
-   font-size: 1.8rem;
-   color: #fff;
+.navbar-wrapper {
+   display: flex;
+   gap: 1rem;
 }
 
-.navbar a:hover {
+.navbar-wrapper a {
+  font-size: 1.6rem;
+   color: #fff;
+   padding: 0.5rem 1rem;
+}
+
+.navbar-wrapper a:hover {
    color: var(--main-color);
    border-bottom: 0.1rem solid var(--main-color);
    padding-bottom: 0.5rem;
    font-size: 2rem;
 }
 
+.icons {
+   display: flex;
+   gap: 1rem;
+}
+
 .icons img {
-   margin: 1rem;
+   width: 28px;
+   height: 28px;
    cursor: pointer;
 }
 
 .icons img:hover {
-   width: 40px;
-   height: 40px;
+   width: 32px;
+   height: 32px;
 }
 
 .btn {
@@ -241,4 +252,77 @@ section {
 
 .footer .share img:hover {
   background-color: var(--main-color);
+}
+
+/* MOBILE (até 768px) */
+@media (max-width: 768px) {
+   .header section {
+      flex-direction: row;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 1rem;
+   }
+
+   .navbar-wrapper {
+      flex: 1;
+      justify-content: center;
+      gap: 1rem;
+   }
+   
+   .navbar {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.3rem;
+   }
+   
+   .navbar a {
+      font-size: 1.4rem;
+     padding: 0.4rem 0.6rem;
+   }
+   
+  .icons {
+      gap: 0.3rem;
+   }
+
+   .logo img {
+      height: 45px;
+   }
+   
+   .home-container {
+      background-attachment: scroll;
+      min-height: 90vh;
+      text-align: center;
+   }
+   
+   .about .row {
+      flex-direction: column;
+      text-align: center;
+   }
+   
+   section {
+      padding: 2rem 1rem;
+   }
+   
+   .box-container {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+   }
+}
+
+/* TABLET (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+   .header section {
+      padding: 1rem 3rem;
+   }
+   
+   .box-container {
+      grid-template-columns: repeat(2, 1fr);
+   }
+}
+
+/* DESKTOP GRANDE (1025px+) */
+@media (min-width: 1025px) {
+   .header section {
+      padding: 1.5rem 5rem;
+   }
 }
