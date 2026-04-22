@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('load', () => {
     setTimeout(() => {
       loader.classList.add('hidden');
-      // Trigger first-visible reveals after loader
       triggerReveal();
     }, 1500);
   });
@@ -19,15 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const header = document.getElementById('header');
   const navLinks = document.querySelectorAll('.nav-link');
   const sections = document.querySelectorAll('section[id]');
+  const backTop = document.getElementById('backTop');
 
   function onScroll() {
-    // Scrolled class
     header.classList.toggle('scrolled', window.scrollY > 60);
+    if (backTop) backTop.classList.toggle('visible', window.scrollY > 400);
 
-    // Back-to-top visibility
-    backTop.classList.toggle('visible', window.scrollY > 400);
-
-    // Active nav link based on scroll position
     let currentId = '';
     sections.forEach(sec => {
       const top = sec.offsetTop - 120;
@@ -70,21 +66,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   navOverlay.addEventListener('click', closeMenu);
 
-  // Close on nav link click
   navbar.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', closeMenu);
   });
 
 
-  /* ---- 4. SMOOTH SCROLL for anchor links ---- */
+  /* ---- 4. SMOOTH SCROLL para links âncora ----
+     CORRIGIDO: o smooth scroll agora funciona corretamente em mobile.
+     Antes, o preventDefault() impedia o comportamento padrão mas o
+     scrollTo com behavior:'smooth' tem suporte limitado em alguns
+     browsers mobile antigos. Adicionado fallback manual. */
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', e => {
-      const target = document.querySelector(anchor.getAttribute('href'));
+    anchor.addEventListener('click', function (e) {
+      const href = this.getAttribute('href');
+      if (href === '#') return;
+      const target = document.querySelector(href);
       if (!target) return;
       e.preventDefault();
-      const headerH = header.offsetHeight;
+
+      const headerH = header ? header.offsetHeight : 70;
       const top = target.getBoundingClientRect().top + window.scrollY - headerH;
-      window.scrollTo({ top, behavior: 'smooth' });
+
+      // Tenta smooth scroll nativo; fallback para scrollTo simples
+      try {
+        window.scrollTo({ top, behavior: 'smooth' });
+      } catch (err) {
+        window.scrollTo(0, top);
+      }
     });
   });
 
@@ -93,10 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const revealEls = document.querySelectorAll('[data-reveal]');
 
   const revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry, i) => {
+    entries.forEach(entry => {
       if (entry.isIntersecting) {
-        // stagger siblings
-        const siblings = [...entry.target.closest('section')?.querySelectorAll('[data-reveal]') || []];
+        const siblings = [
+          ...(entry.target.closest('section')?.querySelectorAll('[data-reveal]') || [])
+        ];
         const idx = siblings.indexOf(entry.target);
         entry.target.style.transitionDelay = `${idx * 0.12}s`;
         entry.target.classList.add('revealed');
@@ -121,14 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = entry.target;
       const target = +el.dataset.count;
       const numEl = el.querySelector('.stat-num');
-      let start = 0;
       const duration = 1800;
       const startTime = performance.now();
 
       function update(now) {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        // ease-out
         const eased = 1 - Math.pow(1 - progress, 3);
         numEl.textContent = Math.floor(eased * target);
         if (progress < 1) requestAnimationFrame(update);
@@ -162,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function buildDots() {
+    if (!dotsContainer) return;
     dotsContainer.innerHTML = '';
     totalSlides = Math.ceil(cards.length / slidesPerView);
     for (let i = 0; i < totalSlides; i++) {
@@ -169,14 +177,18 @@ document.addEventListener('DOMContentLoaded', () => {
       dot.classList.add('rev-dot');
       dot.setAttribute('aria-label', `Slide ${i + 1}`);
       if (i === currentSlide) dot.classList.add('active');
-      dot.addEventListener('click', () => goTo(i));
+      dot.addEventListener('click', () => { goTo(i); resetAuto(); });
       dotsContainer.appendChild(dot);
     }
   }
 
   function goTo(idx) {
-    currentSlide = (idx + totalSlides) % totalSlides;
-    const cardWidth = cards[0]?.offsetWidth + 25 || 0; // gap: 2.5rem = 25px
+    currentSlide = ((idx % totalSlides) + totalSlides) % totalSlides;
+    if (!cards[0]) return;
+    // Calcula largura real do card incluindo gap
+    const cardStyle = window.getComputedStyle(cards[0]);
+    const gap = parseFloat(window.getComputedStyle(track).gap) || 25;
+    const cardWidth = cards[0].offsetWidth + gap;
     track.style.transform = `translateX(-${currentSlide * cardWidth * slidesPerView}px)`;
     document.querySelectorAll('.rev-dot').forEach((d, i) => {
       d.classList.toggle('active', i === currentSlide);
@@ -201,14 +213,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Touch swipe
     let touchStartX = 0;
-    track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    let touchStartY = 0;
+
+    track.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
     track.addEventListener('touchend', e => {
-      const diff = touchStartX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) > 50) {
-        goTo(currentSlide + (diff > 0 ? 1 : -1));
+      const diffX = touchStartX - e.changedTouches[0].clientX;
+      const diffY = touchStartY - e.changedTouches[0].clientY;
+      // Só troca slide se o gesto foi predominantemente horizontal
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        goTo(currentSlide + (diffX > 0 ? 1 : -1));
         resetAuto();
       }
-    });
+    }, { passive: true });
 
     // Keyboard
     document.addEventListener('keydown', e => {
@@ -217,26 +237,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Recalculate on resize
+    let resizeTimer;
     window.addEventListener('resize', () => {
-      const newSpv = getSlidesPerView();
-      if (newSpv !== slidesPerView) {
-        slidesPerView = newSpv;
-        currentSlide = 0;
-        buildDots();
-        goTo(0);
-      }
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const newSpv = getSlidesPerView();
+        if (newSpv !== slidesPerView) {
+          slidesPerView = newSpv;
+          currentSlide = 0;
+          buildDots();
+          goTo(0);
+        }
+      }, 150);
     });
   }
 
 
   /* ---- 8. BACK TO TOP ---- */
-  const backTop = document.getElementById('backTop');
   backTop?.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      window.scrollTo(0, 0);
+    }
   });
 
 
-  /* ---- 9. PARALLAX on home bg text ---- */
+  /* ---- 9. PARALLAX no texto de fundo do hero ---- */
   const bgText = document.querySelector('.home-bg-text');
   if (bgText) {
     window.addEventListener('scroll', () => {
@@ -245,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  /* ---- 10. PLAN CARD tilt effect (desktop) ---- */
+  /* ---- 10. TILT effect nos cards de plano (apenas desktop) ---- */
   if (window.matchMedia('(hover: hover)').matches) {
     document.querySelectorAll('.plan-card').forEach(card => {
       card.addEventListener('mousemove', e => {
